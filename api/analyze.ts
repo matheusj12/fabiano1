@@ -1,8 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { generateText } from 'ai';
 
-const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const flash  = google('gemini-2.0-flash');
+const pro    = google('gemini-2.5-pro-preview-05-06');
 
 // ─── ETAPA 0: Localização da chapa ──────────────────────────────────────────
 const PROMPT_LOCATE = `
@@ -117,9 +119,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const imageBuffer = Buffer.from(matches[2], 'base64');
 
   try {
-    // ── Etapa 0: Localizar a chapa na imagem ──
+    // ── Etapa 0: Localizar a chapa (flash — rápido) ──
     const { text: locateText } = await generateText({
-      model: openai('gpt-4o'),
+      model: flash,
       messages: [{
         role: 'user',
         content: [
@@ -131,9 +133,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const locateJson = JSON.parse(locateText.match(/\{[\s\S]*\}/)![0]);
     const stoneBbox: number[] = locateJson.stoneBbox ?? [0, 0, 1000, 1000];
 
-    // ── Etapa 1: Caracterização petrológica ──
+    // ── Etapa 1: Caracterização petrológica (pro) ──
     const { text: charText } = await generateText({
-      model: openai('o3'),
+      model: pro,
       messages: [{
         role: 'user',
         content: [
@@ -142,12 +144,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ],
       }],
     });
-
     const charJson = JSON.parse(charText.match(/\{[\s\S]*\}/)![0]);
 
-    // ── Etapa 2: Inspeção técnica por quadrante ──
+    // ── Etapa 2: Inspeção técnica por quadrante (pro) ──
     const { text: inspText } = await generateText({
-      model: openai('o3'),
+      model: pro,
       messages: [{
         role: 'user',
         content: [
