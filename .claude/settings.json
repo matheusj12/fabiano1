@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(psql \"postgresql://postgres.mkjyzhvvtnvkhngszehr:Matheusjulio02111996@aws-0-us-west-2.pooler.supabase.com:6543/postgres\" -c \"CREATE TABLE IF NOT EXISTS connection_test \\(id serial PRIMARY KEY, created_at timestamptz DEFAULT now\\(\\), message text\\);\")",
+      "Bash(curl -s -X POST \"https://mkjyzhvvtnvkhngszehr.supabase.co/rest/v1/rpc/exec_sql\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ranl6aHZ2dG52a2huZ3N6ZWhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDg1Njg1NCwiZXhwIjoyMDkwNDMyODU0fQ.05427W3shifNobzFr8RIzhzBKZCJbAUK-NwTRTEnBak\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ranl6aHZ2dG52a2huZ3N6ZWhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDg1Njg1NCwiZXhwIjoyMDkwNDMyODU0fQ.05427W3shifNobzFr8RIzhzBKZCJbAUK-NwTRTEnBak\" -H \"Content-Type: application/json\" -d '{\"\"query\"\": \"\"CREATE TABLE IF NOT EXISTS connection_test \\(id serial PRIMARY KEY, created_at timestamptz DEFAULT now\\(\\), message text\\);\"\"}')",
+      "Bash(curl -s -X POST \"https://mkjyzhvvtnvkhngszehr.supabase.co/rest/v1/connection_test\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ranl6aHZ2dG52a2huZ3N6ZWhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDg1Njg1NCwiZXhwIjoyMDkwNDMyODU0fQ.05427W3shifNobzFr8RIzhzBKZCJbAUK-NwTRTEnBak\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ranl6aHZ2dG52a2huZ3N6ZWhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDg1Njg1NCwiZXhwIjoyMDkwNDMyODU0fQ.05427W3shifNobzFr8RIzhzBKZCJbAUK-NwTRTEnBak\" -H \"Content-Type: application/json\" -d '{\"\"message\"\": \"\"hello from claude\"\"}')",
+      "Bash(node -e \":*)",
+      "Bash(curl -s -X POST \"https://api.supabase.com/v1/projects/mkjyzhvvtnvkhngszehr/database/query\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ranl6aHZ2dG52a2huZ3N6ZWhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDg1Njg1NCwiZXhwIjoyMDkwNDMyODU0fQ.05427W3shifNobzFr8RIzhzBKZCJbAUK-NwTRTEnBak\" -H \"Content-Type: application/json\" -d '{\"\"query\"\": \"\"CREATE TABLE IF NOT EXISTS connection_test \\(id serial PRIMARY KEY, created_at timestamptz DEFAULT now\\(\\), message text\\);\"\"}')",
+      "Bash(node -e \"require\\(''pg''\\)\")",
+      "Bash(grep -E \"^pg$|^pg-\")",
+      "Bash(node test-supabase.mjs)",
+      "Bash(supabase --help)",
+      "Bash(supabase snippets:*)",
+      "Bash(curl -s \"https://mkjyzhvvtnvkhngszehr.supabase.co/rest/v1/\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ranl6aHZ2dG52a2huZ3N6ZWhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDg1Njg1NCwiZXhwIjoyMDkwNDMyODU0fQ.05427W3shifNobzFr8RIzhzBKZCJbAUK-NwTRTEnBak\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ranl6aHZ2dG52a2huZ3N6ZWhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDg1Njg1NCwiZXhwIjoyMDkwNDMyODU0fQ.05427W3shifNobzFr8RIzhzBKZCJbAUK-NwTRTEnBak\")"
+    ]
+  },
+  "language": "portuguese"
+}
