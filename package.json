@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.53",
+    "@ai-sdk/openai": "^3.0.48",
     "@google/genai": "^1.29.0",
     "@supabase/supabase-js": "^2.100.1",
     "@tailwindcss/vite": "^4.1.14",

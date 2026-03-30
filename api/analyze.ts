@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
 import { generateText } from 'ai';
 
 const prompt = `
@@ -24,6 +24,7 @@ const prompt = `
   }
 
   Seja técnico. Se encontrar lascas nas bordas ou rachaduras internas, marque-as com precisão.
+  Responda APENAS com o JSON, sem texto adicional.
 `;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -36,21 +37,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'image is required' });
   }
 
-  const google = createGoogleGenerativeAI({
-    apiKey: process.env.GEMINI_API_KEY || '',
+  const openai = createOpenAI({
+    apiKey: process.env.OPENAI_API_KEY || '',
   });
 
   try {
-    const imageData = image.split(',')[1];
-
     const { text } = await generateText({
-      model: google('gemini-2.0-flash'),
+      model: openai('gpt-4o'),
       messages: [
         {
           role: 'user',
           content: [
             { type: 'text', text: prompt },
-            { type: 'image', image: imageData },
+            { type: 'image', image: image as `data:${string}` },
           ],
         },
       ],
@@ -61,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     res.status(200).json(JSON.parse(jsonMatch[0]));
   } catch (error: any) {
-    console.error('Erro Gemini:', error);
+    console.error('Erro OpenAI:', error);
     res.status(500).json({ error: error.message || 'Erro na análise' });
   }
 }
