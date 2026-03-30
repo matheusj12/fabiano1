@@ -38,13 +38,20 @@ Faça uma varredura MINUCIOSA da chapa dividindo em 4 quadrantes:
 Para cada quadrante, identifique TODOS os defeitos presentes:
 - Rachaduras (fraturas estruturais profundas)
 - Fissuras (micro-trincas superficiais)
-- Lascas (remoção de material nas bordas ou superfície)
+- Lascas (fragmento de material removido: identifique o PONTO EXATO onde o material foi arrancado, não a borda inteira da chapa)
 - Manchas (oxidação, contaminação, umidade)
 - Poros (cavidades naturais ou artificiais)
 - Eflorescências (depósitos minerais brancos)
 - Irregularidades de superfície (ondulações, marcas de serragem)
 
-Para cada defeito, forneça bounding box [ymin, xmin, ymax, xmax] com valores 0-1000.
+REGRAS CRÍTICAS DE BOUNDING BOX [ymin, xmin, ymax, xmax] — valores 0-1000:
+• A box deve abraçar APENAS a área afetada, NÃO o entorno.
+• Para LASCA: delimite somente a região onde o material foi removido (cavidade ou fresta exposta). NÃO inclua a borda inteira da chapa — apenas o trecho com dano real. Box deve ser PEQUENA e PRECISA.
+• Para RACHADURA / FISSURA: siga o traçado linear; box estreita e alongada.
+• Para MANCHA: cubra apenas a área descolorada, não ultrapasse as bordas da mancha.
+• Para PORO / EFLORESCÊNCIA: box minúscula centrada no defeito pontual.
+• Máximo de sobreposição entre boxes do mesmo tipo: 20%.
+• Se um defeito for menor que 20×20 pixels na escala 0-1000, use box mínima de 20×20.
 
 Critérios de qualityScore:
 95-100: Chapa premium, sem defeitos visíveis
