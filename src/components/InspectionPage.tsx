@@ -247,10 +247,22 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
       const result = await analyzeStoneImage(base64);
       setAiResult(result);
       
-      // Automatically draw the detections on the canvas
       if (result.detections && result.detections.length > 0) {
         drawAIDetections(result.detections);
       }
+
+      // Salva inspeção no banco silenciosamente
+      fetch('/api/inspections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_base64: base64,
+          quality_score: result.qualityScore,
+          summary: result.summary,
+          imperfections: result.imperfections,
+          detections: result.detections,
+        }),
+      }).catch(() => {});
     } catch (error) {
       setAiError(error instanceof Error ? error.message : "Erro desconhecido na análise.");
     } finally {
