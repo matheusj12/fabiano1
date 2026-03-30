@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
-  Pencil, Eraser, RotateCcw, Trash2, Download, Camera,
+  Pencil, Eraser, RotateCcw, Trash2, Download, Camera, Upload,
   BrainCircuit, Loader2, Sparkles, AlertTriangle, CheckCircle, ArrowRight,
+  Circle, Square, Hexagon,
 } from 'lucide-react';
 import { analyzeStoneImage, AIAnalysisResult } from '../services/aiService';
 import { StoneImperfection } from '../types';
@@ -13,13 +14,19 @@ interface InspectionPageProps {
 }
 
 const MARK_COLORS: Record<string, string> = {
-  furo:      '#3498db',
-  recorte:   '#9b59b6',
-  lasca:     '#e67e22',
-  rachadura: '#e74c3c',
-  fissura:   '#e74c3c',
-  mancha:    '#795548',
-  outro:     '#95a5a6',
+  furo:      '#60a5fa',
+  recorte:   '#a78bfa',
+  lasca:     '#fb923c',
+  rachadura: '#f87171',
+  fissura:   '#f87171',
+  mancha:    '#a8896c',
+  outro:     '#94a3b8',
+};
+
+const toolIcons: Record<string, React.ReactNode> = {
+  furo: <Circle className="w-3.5 h-3.5" />,
+  recorte: <Square className="w-3.5 h-3.5" />,
+  lasca: <Hexagon className="w-3.5 h-3.5" />,
 };
 
 export default function InspectionPage({ onNext }: InspectionPageProps) {
@@ -28,11 +35,9 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [strokeCount, setStrokeCount] = useState(0);
   const [undoStack, setUndoStack] = useState<ImageData[]>([]);
-  const [imageName, setImageName] = useState('Nenhuma imagem carregada');
+  const [imageName, setImageName] = useState('');
 
-  // marcações manuais estruturadas
   const [manualMarks, setManualMarks] = useState<StoneImperfection[]>([]);
-  // bbox da pedra retornado pela API (0-1000)
   const [stoneBbox, setStoneBbox] = useState<[number,number,number,number]>([0,0,1000,1000]);
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -80,7 +85,7 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
     type: Tool | string,
     cx: number, cy: number, rw: number, rh: number,
   ) => {
-    const color = MARK_COLORS[type] || '#e74c3c';
+    const color = MARK_COLORS[type] || '#f87171';
     ctx.save();
     ctx.strokeStyle = color;
     ctx.fillStyle = color + '44';
@@ -94,7 +99,6 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
       ctx.fill();
       ctx.stroke();
       ctx.setLineDash([]);
-      // inner X
       ctx.lineWidth = 1.5;
       ctx.strokeStyle = color;
       ctx.beginPath();
@@ -109,14 +113,12 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
       ctx.fillRect(cx - rw / 2, cy - rh / 2, rw, rh);
       ctx.setLineDash([]);
     } else {
-      // lasca / default oval
       ctx.beginPath();
       ctx.ellipse(cx, cy, rw / 2, rh / 2, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
     }
 
-    // label
     ctx.fillStyle = color;
     ctx.font = 'bold 9px sans-serif';
     ctx.textAlign = 'center';
@@ -131,12 +133,10 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
 
     saveUndo();
 
-    // pixel size on canvas for the mark
     const pw = canvas.width  * 0.06;
     const ph = canvas.height * 0.06;
     drawMarkShape(ctx, tool, canvasX, canvasY, pw, ph);
 
-    // normalize to stone-relative (0-1)
     const [sby1, sbx1, sby2, sbx2] = stoneBbox;
     const sbW = sbx2 - sbx1 || 1000;
     const sbH = sby2 - sby1 || 1000;
@@ -180,7 +180,7 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, r / 2, 0, Math.PI * 2);
     if (tool === 'pen') {
-      ctx.fillStyle = 'rgba(220,50,50,0.92)';
+      ctx.fillStyle = 'rgba(248,113,113,0.92)';
       ctx.fill();
     } else {
       ctx.save();
@@ -203,7 +203,7 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
       ctx.beginPath();
       ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
       ctx.lineTo(pos.x, pos.y);
-      ctx.strokeStyle = 'rgba(220,50,50,0.92)';
+      ctx.strokeStyle = 'rgba(248,113,113,0.92)';
       ctx.lineWidth   = brushSize;
       ctx.stroke();
     } else {
@@ -406,103 +406,128 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
     };
   }, [paint, stopPaint]);
 
-  // ── cursor class ──────────────────────────────────────────────────────────
   const cursorClass = tool === 'eraser' ? 'cursor-cell' : 'cursor-crosshair';
+
+  const gradeColor = (grade: string) => {
+    if (grade === 'A') return { text: 'text-success-400', bg: 'bg-success-400/10', border: 'border-success-400/30' };
+    if (grade === 'B') return { text: 'text-warning-400', bg: 'bg-warning-400/10', border: 'border-warning-400/30' };
+    if (grade === 'C') return { text: 'text-orange-400', bg: 'bg-orange-400/10', border: 'border-orange-400/30' };
+    return { text: 'text-danger-400', bg: 'bg-danger-400/10', border: 'border-danger-400/30' };
+  };
+
+  const scoreBarColor = (value: number) =>
+    value > 80 ? '#4ade80' : value > 60 ? '#facc15' : '#f87171';
 
   // ── render ────────────────────────────────────────────────────────────────
   return (
-    <div className="p-5 flex flex-col gap-4">
+    <div className="flex flex-col gap-5 animate-fade-in">
 
       {/* TOOLBAR */}
-      <div className="flex flex-wrap items-center gap-2 bg-[#1e1e1e] border border-[#333] rounded-xl p-3">
+      <div className="glass-card p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Draw tools */}
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-950/50">
+            <button
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md transition-all cursor-pointer ${
+                tool === 'pen'
+                  ? 'bg-danger-400/20 text-danger-400 ring-1 ring-danger-400/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              }`}
+              onClick={() => setTool('pen')}
+            >
+              <Pencil className="w-3.5 h-3.5" /> Rachadura
+            </button>
 
-        {/* Draw tools */}
-        <button
-          className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-all ${tool === 'pen' ? 'bg-[#c0392b] text-white' : 'bg-[#2a2a2a] text-[#f0ede8] border border-[#444] hover:bg-[#333]'}`}
-          onClick={() => setTool('pen')}
-        >
-          <Pencil className="w-4 h-4" /> Rachadura
-        </button>
+            {([
+              { key: 'furo' as Tool,    label: 'Furo',    color: MARK_COLORS.furo },
+              { key: 'recorte' as Tool, label: 'Recorte', color: MARK_COLORS.recorte },
+              { key: 'lasca' as Tool,   label: 'Lasca',   color: MARK_COLORS.lasca },
+            ]).map(({ key, label, color }) => (
+              <button
+                key={key}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md transition-all cursor-pointer ${
+                  tool === key
+                    ? 'ring-1'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                }`}
+                style={tool === key ? { backgroundColor: color + '22', color, ringColor: color + '55' } : {}}
+                onClick={() => setTool(key)}
+              >
+                {toolIcons[key]}
+                {label}
+              </button>
+            ))}
 
-        {/* Manual mark tools */}
-        {([
-          { key: 'furo',    label: 'Furo',    color: '#3498db' },
-          { key: 'recorte', label: 'Recorte', color: '#9b59b6' },
-          { key: 'lasca',   label: 'Lasca',   color: '#e67e22' },
-        ] as const).map(({ key, label, color }) => (
-          <button
-            key={key}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg transition-all border ${
-              tool === key
-                ? 'text-white border-transparent'
-                : 'bg-[#2a2a2a] text-[#f0ede8] border-[#444] hover:bg-[#333]'
-            }`}
-            style={tool === key ? { backgroundColor: color, borderColor: color } : {}}
-            onClick={() => setTool(key)}
-          >
-            <span className="w-2.5 h-2.5 rounded-full border-2 shrink-0" style={{ borderColor: tool === key ? 'white' : color, backgroundColor: tool === key ? 'white' : 'transparent' }} />
-            {label}
-          </button>
-        ))}
+            <button
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md transition-all cursor-pointer ${
+                tool === 'eraser'
+                  ? 'bg-info-400/20 text-info-400 ring-1 ring-info-400/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              }`}
+              onClick={() => setTool('eraser')}
+            >
+              <Eraser className="w-3.5 h-3.5" /> Borracha
+            </button>
+          </div>
 
-        <button
-          className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-all ${tool === 'eraser' ? 'bg-[#2980b9] text-white' : 'bg-[#2a2a2a] text-[#f0ede8] border border-[#444] hover:bg-[#333]'}`}
-          onClick={() => setTool('eraser')}
-        >
-          <Eraser className="w-4 h-4" /> Borracha
-        </button>
+          <div className="w-px h-7 bg-gold-400/10 mx-1" />
 
-        <div className="w-px h-7 bg-[#333] mx-1" />
+          {/* Brush size */}
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span>Espessura</span>
+            <input type="range" min="2" max="20" value={brushSize}
+              onChange={e => setBrushSize(parseInt(e.target.value))}
+              className="w-20 accent-gold-400" />
+            <span className="w-7 text-center text-slate-400 font-mono text-[11px]">{brushSize}px</span>
+          </div>
 
-        <div className="flex items-center gap-2 text-sm text-[#aaa]">
-          <span>Espessura</span>
-          <input type="range" min="2" max="20" value={brushSize}
-            onChange={e => setBrushSize(parseInt(e.target.value))}
-            className="w-20 accent-[#c9a84c]" />
-          <span className="w-8 text-center">{brushSize}px</span>
+          <div className="w-px h-7 bg-gold-400/10 mx-1 hidden sm:block" />
+
+          {/* Undo / Clear */}
+          <div className="flex items-center gap-1">
+            <button
+              className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-md text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all disabled:opacity-30 cursor-pointer"
+              onClick={undo} disabled={undoStack.length === 0}
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Desfazer
+            </button>
+            <button
+              className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-md text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all disabled:opacity-30 cursor-pointer"
+              onClick={clearDrawing} disabled={strokeCount === 0}
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Limpar
+            </button>
+          </div>
+
+          <div className="flex-1" />
+
+          {/* AI + Save */}
+          <div className="flex items-center gap-2">
+            <button
+              className="btn-gold flex items-center gap-2 text-xs cursor-pointer"
+              onClick={handleAIAnalysis} disabled={!imageLoaded || isAnalyzing}
+            >
+              {isAnalyzing
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Analisando...</>
+                : <><BrainCircuit className="w-4 h-4" /> Análise Inteligente</>}
+            </button>
+            <button
+              className="btn-ghost flex items-center gap-2 text-xs cursor-pointer"
+              onClick={saveImage} disabled={!imageLoaded}
+            >
+              <Download className="w-4 h-4" /> Salvar
+            </button>
+          </div>
         </div>
-
-        <div className="w-px h-7 bg-[#333] mx-1" />
-
-        <button
-          className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] text-[#f0ede8] border border-[#444] hover:bg-[#333] disabled:opacity-35"
-          onClick={undo} disabled={undoStack.length === 0}
-        >
-          <RotateCcw className="w-4 h-4" /> Desfazer
-        </button>
-        <button
-          className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] text-[#f0ede8] border border-[#444] hover:bg-[#333] disabled:opacity-35"
-          onClick={clearDrawing} disabled={strokeCount === 0}
-        >
-          <Trash2 className="w-4 h-4" /> Limpar
-        </button>
-
-        <div className="flex-1" />
-
-        <button
-          className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-[#c9a84c] text-black font-bold hover:bg-[#b8973b] disabled:opacity-35 transition-all"
-          onClick={handleAIAnalysis} disabled={!imageLoaded || isAnalyzing}
-        >
-          {isAnalyzing
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> Analisando...</>
-            : <><BrainCircuit className="w-4 h-4" /> Análise Inteligente</>}
-        </button>
-
-        <button
-          className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-[#27ae60] text-white hover:bg-[#219a52] disabled:opacity-35"
-          onClick={saveImage} disabled={!imageLoaded}
-        >
-          <Download className="w-4 h-4" /> Salvar
-        </button>
       </div>
 
       {/* MAIN AREA */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
 
         {/* CANVAS */}
         <div
           ref={wrapRef}
-          className={`relative bg-black border border-[#333] rounded-xl overflow-hidden min-h-[450px] flex items-center justify-center ${cursorClass}`}
+          className={`glass-card relative overflow-hidden min-h-[480px] flex items-center justify-center ${cursorClass}`}
           onClick={() => !imageLoaded && fileInputRef.current?.click()}
         >
           <canvas ref={bgCanvasRef}   className="absolute top-0 left-0" />
@@ -511,14 +536,19 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
             onTouchStart={startPaint}
           />
           {!imageLoaded && (
-            <div className="relative z-20 flex flex-col items-center gap-3 pointer-events-none">
-              <Camera className="w-12 h-12 opacity-30 text-white" />
-              <div className="text-sm text-[#888]">Clique para carregar a foto da pedra</div>
+            <div className="relative z-20 flex flex-col items-center gap-4 pointer-events-none">
+              <div className="w-20 h-20 rounded-2xl bg-gold-400/5 border border-gold-400/10 flex items-center justify-center">
+                <Camera className="w-10 h-10 text-gold-400/30" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-slate-400 mb-1">Clique para carregar a foto da pedra</p>
+                <p className="text-[10px] text-slate-600">PNG, JPG até 10MB</p>
+              </div>
               <button
-                className="px-4 py-2 bg-[#2a2a2a] text-[#f0ede8] border border-[#444] rounded-lg pointer-events-auto hover:bg-[#333]"
+                className="btn-gold flex items-center gap-2 text-xs pointer-events-auto cursor-pointer"
                 onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
               >
-                Escolher foto
+                <Upload className="w-4 h-4" /> Escolher Foto
               </button>
             </div>
           )}
@@ -526,89 +556,97 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
 
         {/* AI REPORT PANEL */}
         <div className="flex flex-col gap-4">
-          <div className="bg-[#1e1e1e] border border-[#333] rounded-xl p-5 flex flex-col gap-4 min-h-[450px]">
-            <div className="flex items-center gap-2 text-[#c9a84c] border-b border-[#333] pb-3">
-              <Sparkles className="w-5 h-5" />
-              <h2 className="text-sm font-bold uppercase tracking-widest">Relatório Técnico</h2>
+          <div className="glass-card p-5 flex flex-col gap-4 min-h-[480px]">
+            <div className="flex items-center gap-2 text-gold-400 border-b border-gold-400/10 pb-3">
+              <Sparkles className="w-4 h-4" />
+              <h2 className="text-xs font-bold uppercase tracking-[0.15em]">Relatório Técnico</h2>
             </div>
 
             {!imageLoaded ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 text-[#555]">
-                <BrainCircuit className="w-10 h-10 opacity-20" />
-                <p className="text-xs">Carregue uma imagem para habilitar a análise inteligente.</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-slate-800/50 flex items-center justify-center">
+                  <BrainCircuit className="w-8 h-8 text-slate-700" />
+                </div>
+                <p className="text-xs text-slate-600 max-w-[200px]">
+                  Carregue uma imagem para habilitar a análise inteligente.
+                </p>
               </div>
             ) : isAnalyzing ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
-                <div className="relative">
-                  <BrainCircuit className="w-12 h-12 text-[#c9a84c] animate-pulse" />
-                  <Loader2 className="w-14 h-14 text-[#c9a84c] animate-spin absolute -top-1 -left-1 opacity-40" />
+              <div className="flex-1 flex flex-col items-center justify-center text-center gap-5">
+                <div className="relative w-16 h-16">
+                  <BrainCircuit className="w-10 h-10 text-gold-400 absolute top-3 left-3 animate-pulse" />
+                  <div className="w-16 h-16 border-2 border-gold-400/20 border-t-gold-400 rounded-full animate-spin-slow" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium text-[#f0ede8]">Análise em 3 etapas...</p>
-                  <p className="text-[10px] text-[#888]">Localizando · Caracterizando · Inspecionando</p>
+                  <p className="text-sm font-medium text-slate-200">Análise em 3 etapas...</p>
+                  <p className="text-[10px] text-slate-600 tracking-wide">Localizando · Caracterizando · Inspecionando</p>
                 </div>
               </div>
             ) : aiResult ? (
-              <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1">
+              <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1 animate-fade-in">
 
                 {/* Grade + Scores */}
-                <div className="flex items-center gap-3">
-                  <div className={`text-2xl font-black px-3 py-1 rounded-lg border-2 ${
-                    aiResult.commercialGrade === 'A' ? 'text-[#2ecc71] border-[#27ae60] bg-[#0d2a1a]' :
-                    aiResult.commercialGrade === 'B' ? 'text-[#f1c40f] border-[#f39c12] bg-[#2a2200]' :
-                    aiResult.commercialGrade === 'C' ? 'text-[#e67e22] border-[#d35400] bg-[#2a1400]' :
-                    'text-[#e74c3c] border-[#c0392b] bg-[#2a0d0d]'
-                  }`}>{aiResult.commercialGrade}</div>
-                  <div className="flex-1 flex flex-col gap-1.5">
+                <div className="flex items-start gap-3">
+                  <div className={`text-3xl font-black px-4 py-2 rounded-xl border-2 ${gradeColor(aiResult.commercialGrade).text} ${gradeColor(aiResult.commercialGrade).bg} ${gradeColor(aiResult.commercialGrade).border}`}>
+                    {aiResult.commercialGrade}
+                  </div>
+                  <div className="flex-1 flex flex-col gap-2">
                     {[
-                      { label: 'Qualidade',   value: aiResult.qualityScore,      color: aiResult.qualityScore > 80 ? '#2ecc71' : aiResult.qualityScore > 60 ? '#f1c40f' : '#e74c3c' },
-                      { label: 'Integridade', value: aiResult.structuralIntegrity, color: '#3498db' },
-                      { label: 'Uniformidade', value: aiResult.colorUniformity,    color: '#9b59b6' },
-                    ].map(({ label, value, color }) => (
-                      <React.Fragment key={label}>
-                        <div className="flex justify-between text-[10px] text-[#888]">
-                          <span>{label}</span><span className="text-[#f0ede8]">{value}%</span>
+                      { label: 'Qualidade',    value: aiResult.qualityScore },
+                      { label: 'Integridade',  value: aiResult.structuralIntegrity },
+                      { label: 'Uniformidade', value: aiResult.colorUniformity },
+                    ].map(({ label, value }) => (
+                      <div key={label}>
+                        <div className="flex justify-between text-[10px] mb-0.5">
+                          <span className="text-slate-500">{label}</span>
+                          <span className="text-slate-300 font-mono">{value}%</span>
                         </div>
-                        <div className="h-1.5 bg-[#333] rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{ width: `${value}%`, backgroundColor: color }} />
+                        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{ width: `${value}%`, backgroundColor: scoreBarColor(value) }}
+                          />
                         </div>
-                      </React.Fragment>
+                      </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Caracterização */}
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-2 gap-2">
                   {[
                     { label: 'Tipo',       value: aiResult.stoneType },
                     { label: 'Acabamento', value: aiResult.finish },
                     { label: 'Cor',        value: aiResult.color },
                     { label: 'Espessura',  value: aiResult.estimatedThickness },
                   ].map(({ label, value }) => (
-                    <div key={label} className="bg-[#252525] rounded-lg p-2 border border-[#333]">
-                      <div className="text-[9px] text-[#666] uppercase">{label}</div>
-                      <div className="text-[11px] text-[#f0ede8] font-medium capitalize truncate">{value}</div>
+                    <div key={label} className="bg-slate-900/50 rounded-lg p-2.5 border border-slate-700/30">
+                      <div className="text-[9px] text-slate-600 uppercase tracking-wide">{label}</div>
+                      <div className="text-[11px] text-slate-200 font-medium capitalize truncate mt-0.5">{value}</div>
                     </div>
                   ))}
                 </div>
 
                 {/* Quadrantes */}
                 {aiResult.quadrantAnalysis && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] text-[#888] uppercase font-bold">Análise por Quadrante</span>
-                    <div className="grid grid-cols-2 gap-1">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wide">Análise por Quadrante</span>
+                    <div className="grid grid-cols-2 gap-1.5">
                       {(['topLeft','topRight','bottomLeft','bottomRight'] as const).map((key, idx) => {
                         const labels = ['↖ Sup. Esq.','↗ Sup. Dir.','↙ Inf. Esq.','↘ Inf. Dir.'];
                         const q = aiResult.quadrantAnalysis[key];
+                        const qColor = q.score > 80 ? 'border-success-400/20 bg-success-400/5' :
+                                       q.score > 60 ? 'border-warning-400/20 bg-warning-400/5' :
+                                       'border-danger-400/20 bg-danger-400/5';
                         return (
-                          <div key={key} className={`p-2 rounded-lg border ${q.score > 80 ? 'border-[#27ae60] bg-[#0d2a1a]' : q.score > 60 ? 'border-[#f39c12] bg-[#2a2200]' : 'border-[#c0392b] bg-[#2a0d0d]'}`}>
+                          <div key={key} className={`p-2.5 rounded-lg border ${qColor}`}>
                             <div className="flex justify-between items-center mb-1">
-                              <span className="text-[9px] text-[#888]">{labels[idx]}</span>
-                              <span className={`text-[10px] font-bold ${q.score > 80 ? 'text-[#2ecc71]' : q.score > 60 ? 'text-[#f1c40f]' : 'text-[#e74c3c]'}`}>{q.score}%</span>
+                              <span className="text-[9px] text-slate-500">{labels[idx]}</span>
+                              <span className={`text-[10px] font-bold font-mono ${q.score > 80 ? 'text-success-400' : q.score > 60 ? 'text-warning-400' : 'text-danger-400'}`}>{q.score}%</span>
                             </div>
                             {q.issues.length > 0
-                              ? q.issues.slice(0,2).map((issue, i) => <div key={i} className="text-[9px] text-[#aaa] truncate">• {issue}</div>)
-                              : <div className="text-[9px] text-[#2ecc71]">• Sem defeitos</div>}
+                              ? q.issues.slice(0,2).map((issue, i) => <div key={i} className="text-[9px] text-slate-500 truncate">• {issue}</div>)
+                              : <div className="text-[9px] text-success-400">• Sem defeitos</div>}
                           </div>
                         );
                       })}
@@ -617,26 +655,28 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
                 )}
 
                 {/* Resumo */}
-                <div className="bg-[#252525] p-3 rounded-lg border border-[#333]">
-                  <div className="text-[9px] text-[#888] uppercase mb-1">Resumo Técnico</div>
-                  <p className="text-[11px] text-[#ccc] leading-relaxed">{aiResult.summary}</p>
+                <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/30">
+                  <div className="text-[9px] text-slate-600 uppercase mb-1 tracking-wide">Resumo Técnico</div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">{aiResult.summary}</p>
                 </div>
 
                 {/* Defeitos */}
                 {aiResult.detections?.length > 0 && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] text-[#888] uppercase font-bold">{aiResult.detections.length} Defeito(s)</span>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wide">
+                      {aiResult.detections.length} Defeito(s)
+                    </span>
                     {aiResult.detections.map((d, i) => (
-                      <div key={i} className={`flex items-start gap-2 text-[11px] p-2 rounded border-l-2 ${
-                        d.severity === 'crítico' ? 'border-[#e74c3c] bg-[#1a0a0a] text-[#e74c3c]' :
-                        d.severity === 'moderado' ? 'border-[#f39c12] bg-[#1a1200] text-[#f39c12]' :
-                        'border-[#888] bg-[#1a1a1a] text-[#aaa]'
+                      <div key={i} className={`flex items-start gap-2 text-[11px] p-2.5 rounded-lg border-l-2 ${
+                        d.severity === 'crítico' ? 'border-danger-400 bg-danger-400/5 text-danger-400' :
+                        d.severity === 'moderado' ? 'border-warning-400 bg-warning-400/5 text-warning-400' :
+                        'border-slate-600 bg-slate-800/30 text-slate-400'
                       }`}>
                         <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
                         <div>
                           <span className="font-bold capitalize">{d.type}</span>
-                          <span className="text-[#666] mx-1">·</span>
-                          <span className="text-[#888] text-[10px]">{d.description}</span>
+                          <span className="text-slate-600 mx-1">·</span>
+                          <span className="text-slate-500 text-[10px]">{d.description}</span>
                         </div>
                       </div>
                     ))}
@@ -645,11 +685,11 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
 
                 {/* Recomendações */}
                 {aiResult.recommendations?.length > 0 && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] text-[#888] uppercase font-bold">Recomendações</span>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wide">Recomendações</span>
                     {aiResult.recommendations.map((r, i) => (
-                      <div key={i} className="flex items-start gap-2 text-[11px] text-[#aaa] bg-[#1a1a1a] p-2 rounded border-l-2 border-[#3498db]">
-                        <CheckCircle className="w-3 h-3 text-[#3498db] mt-0.5 shrink-0" />
+                      <div key={i} className="flex items-start gap-2 text-[11px] text-slate-400 bg-info-400/5 p-2.5 rounded-lg border-l-2 border-info-400">
+                        <CheckCircle className="w-3 h-3 text-info-400 mt-0.5 shrink-0" />
                         <span>{r}</span>
                       </div>
                     ))}
@@ -658,35 +698,42 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
 
                 {/* Marcações manuais */}
                 {manualMarks.filter(m => m.source === 'manual').length > 0 && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] text-[#888] uppercase font-bold">Marcações Manuais</span>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wide">Marcações Manuais</span>
                     {manualMarks.filter(m => m.source === 'manual').map(m => (
-                      <div key={m.id} className="flex items-center gap-2 text-[11px] p-2 rounded border-l-2 bg-[#1a1a1a]"
-                        style={{ borderColor: MARK_COLORS[m.type] || '#888' }}>
+                      <div key={m.id} className="flex items-center gap-2 text-[11px] p-2.5 rounded-lg border-l-2 bg-slate-800/30"
+                        style={{ borderColor: MARK_COLORS[m.type] || '#94a3b8' }}>
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: MARK_COLORS[m.type] }} />
                         <span className="font-bold capitalize" style={{ color: MARK_COLORS[m.type] }}>{m.label}</span>
-                        <span className="text-[#666] text-[10px]">marcado manualmente</span>
+                        <span className="text-slate-600 text-[10px]">marcado manualmente</span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
             ) : aiError ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 text-[#e74c3c]">
-                <AlertTriangle className="w-10 h-10" />
-                <p className="text-xs">{aiError}</p>
-                <button onClick={handleAIAnalysis} className="text-[10px] underline uppercase tracking-widest text-[#888] hover:text-white">
+              <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-danger-400/10 flex items-center justify-center">
+                  <AlertTriangle className="w-7 h-7 text-danger-400" />
+                </div>
+                <p className="text-xs text-danger-400 max-w-[220px]">{aiError}</p>
+                <button onClick={handleAIAnalysis}
+                  className="text-[10px] text-slate-500 hover:text-gold-400 uppercase tracking-[0.1em] underline underline-offset-4 cursor-pointer transition-colors">
                   Tentar novamente
                 </button>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 text-[#888]">
-                <BrainCircuit className="w-10 h-10 opacity-40" />
-                <p className="text-xs">Clique em "Análise Inteligente" para processar a chapa.</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-gold-400/5 border border-gold-400/10 flex items-center justify-center">
+                  <BrainCircuit className="w-8 h-8 text-gold-400/30" />
+                </div>
+                <p className="text-xs text-slate-600 max-w-[200px]">
+                  Clique em "Análise Inteligente" para processar a chapa.
+                </p>
               </div>
             )}
 
-            <div className="mt-auto pt-3 border-t border-[#333] flex items-center justify-between text-[9px] text-[#555] uppercase tracking-tighter">
+            <div className="mt-auto pt-3 border-t border-slate-700/20 flex items-center justify-between text-[9px] text-slate-700 uppercase tracking-[0.1em]">
               <span>Gemini 2.5 Pro · 3 etapas</span>
               <span>MarmorCut Pro</span>
             </div>
@@ -694,26 +741,30 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
 
           <button
             onClick={handleNext} disabled={!imageLoaded}
-            className="w-full flex items-center justify-center gap-2 py-4 bg-[#27ae60] text-white rounded-xl font-bold hover:bg-[#219a52] transition-all disabled:opacity-35 group"
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm transition-all disabled:opacity-30 group cursor-pointer
+              bg-gradient-to-r from-success-500 to-emerald-600 text-white hover:from-success-400 hover:to-emerald-500 shadow-lg shadow-success-500/20 hover:shadow-success-500/30"
           >
-            Próximo Passo: Calcular Cortes <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            Próximo: Calcular Cortes
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </div>
 
       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={loadStoneImage} />
 
-      <div className="flex items-center gap-3 text-xs text-[#888] flex-wrap">
-        <span className={`px-2.5 py-1 rounded-md font-medium border ${imageLoaded ? 'bg-[#3d1a1a] text-[#e74c3c] border-[#c0392b]' : 'bg-[#222] text-[#888] border-[#333]'}`}>
-          {imageName}
-        </span>
-        <span className="text-[#555]">●</span>
-        <span className="text-[#666]">
+      {/* Status bar */}
+      <div className="flex items-center gap-3 text-xs text-slate-600 flex-wrap px-1">
+        {imageName && (
+          <span className="badge badge-gold">{imageName}</span>
+        )}
+        <span className="text-slate-700">
           {!isPaintTool
             ? `Clique na pedra para marcar ${tool === 'furo' ? 'um furo' : tool === 'recorte' ? 'um recorte' : 'uma lasca'}`
             : 'Trace sobre as imperfeições ou use a Análise Inteligente'}
         </span>
-        {strokeCount > 0 && <span className="ml-auto text-[#888]">{strokeCount} marca(s)</span>}
+        {strokeCount > 0 && (
+          <span className="ml-auto badge badge-info">{strokeCount} marca(s)</span>
+        )}
       </div>
     </div>
   );
