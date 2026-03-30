@@ -16,7 +16,7 @@ export interface AIAnalysisResult {
 }
 
 export async function analyzeStoneImage(base64Image: string): Promise<AIAnalysisResult> {
-  const model = "gemini-2.5-pro";
+  const model = "gemini-2.0-flash";
   
   const prompt = `
     Analise esta chapa de pedra (mármore ou granito) para uma marmoraria.
