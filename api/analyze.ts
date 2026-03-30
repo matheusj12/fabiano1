@@ -4,6 +4,19 @@ import { generateText } from 'ai';
 
 const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 
+// ─── ETAPA 0: Localização da chapa ──────────────────────────────────────────
+const PROMPT_LOCATE = `
+Localize a chapa de pedra natural nesta imagem e retorne APENAS um JSON:
+{
+  "stoneBbox": [ymin, xmin, ymax, xmax],
+  "confidence": 0-100
+}
+
+stoneBbox usa coordenadas 0-1000 (relativas ao tamanho da imagem).
+Delimite apenas a chapa de pedra — ignore parede, piso, metal, madeira e fundo.
+Se não houver chapa, use [0, 0, 1000, 1000].
+`;
+
 // ─── ETAPA 1: Caracterização petrológica ────────────────────────────────────
 const PROMPT_CHARACTERIZE = `
 Você é um petrólogo especialista em rochas ornamentais com 20 anos de experiência em marmorarias industriais.
@@ -23,19 +36,26 @@ Seja preciso. Analise textura, brilho e padrão superficial.
 `;
 
 // ─── ETAPA 2: Inspeção técnica por quadrante ────────────────────────────────
-const buildInspectionPrompt = (char: string) => `
+const buildInspectionPrompt = (char: string, stoneBbox: number[]) => `
 Você é um inspetor de qualidade sênior especializado em chapas de pedra natural para marmoraria.
 
 CARACTERIZAÇÃO JÁ REALIZADA:
 ${char}
 
-Faça uma varredura MINUCIOSA da chapa dividindo em 4 quadrantes:
-• Superior esquerdo  (x: 0-500,   y: 0-500)
-• Superior direito   (x: 500-1000, y: 0-500)
-• Inferior esquerdo  (x: 0-500,   y: 500-1000)
-• Inferior direito   (x: 500-1000, y: 500-1000)
+DELIMITAÇÃO DA CHAPA (coordenadas 0-1000):
+A chapa de pedra ocupa a região: ymin=${stoneBbox[0]}, xmin=${stoneBbox[1]}, ymax=${stoneBbox[2]}, xmax=${stoneBbox[3]}
 
-Para cada quadrante, identifique TODOS os defeitos presentes:
+⚠️ REGRA ABSOLUTA: Inspecione SOMENTE o interior da chapa de pedra.
+IGNORE completamente: parede, piso, fundo, metal, madeira, pessoas, sombras, reflexos no chão.
+Qualquer box_2d fora da região da chapa é PROIBIDO.
+
+Divida a chapa em 4 quadrantes RELATIVOS à sua área:
+• Superior esquerdo  — metade esquerda, metade superior da chapa
+• Superior direito   — metade direita, metade superior da chapa
+• Inferior esquerdo  — metade esquerda, metade inferior da chapa
+• Inferior direito   — metade direita, metade inferior da chapa
+
+Para cada quadrante, identifique TODOS os defeitos DENTRO DA PEDRA:
 - Rachaduras (fraturas estruturais profundas)
 - Fissuras (micro-trincas superficiais)
 - Lascas (fragmento de material removido: identifique o PONTO EXATO onde o material foi arrancado, não a borda inteira da chapa)
@@ -45,13 +65,13 @@ Para cada quadrante, identifique TODOS os defeitos presentes:
 - Irregularidades de superfície (ondulações, marcas de serragem)
 
 REGRAS CRÍTICAS DE BOUNDING BOX [ymin, xmin, ymax, xmax] — valores 0-1000:
+• TODAS as boxes devem estar DENTRO da região da chapa (ymin=${stoneBbox[0]}–${stoneBbox[2]}, xmin=${stoneBbox[1]}–${stoneBbox[3]}).
 • A box deve abraçar APENAS a área afetada, NÃO o entorno.
-• Para LASCA: delimite somente a região onde o material foi removido (cavidade ou fresta exposta). NÃO inclua a borda inteira da chapa — apenas o trecho com dano real. Box deve ser PEQUENA e PRECISA.
+• Para LASCA: delimite somente a região onde o material foi removido. Box PEQUENA e PRECISA.
 • Para RACHADURA / FISSURA: siga o traçado linear; box estreita e alongada.
 • Para MANCHA: cubra apenas a área descolorada, não ultrapasse as bordas da mancha.
 • Para PORO / EFLORESCÊNCIA: box minúscula centrada no defeito pontual.
 • Máximo de sobreposição entre boxes do mesmo tipo: 20%.
-• Se um defeito for menor que 20×20 pixels na escala 0-1000, use box mínima de 20×20.
 
 Critérios de qualityScore:
 95-100: Chapa premium, sem defeitos visíveis
@@ -97,6 +117,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const imageBuffer = Buffer.from(matches[2], 'base64');
 
   try {
+    // ── Etapa 0: Localizar a chapa na imagem ──
+    const { text: locateText } = await generateText({
+      model: openai('gpt-4o'),
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: PROMPT_LOCATE },
+          { type: 'image', image: imageBuffer },
+        ],
+      }],
+    });
+    const locateJson = JSON.parse(locateText.match(/\{[\s\S]*\}/)![0]);
+    const stoneBbox: number[] = locateJson.stoneBbox ?? [0, 0, 1000, 1000];
+
     // ── Etapa 1: Caracterização petrológica ──
     const { text: charText } = await generateText({
       model: openai('o3'),
@@ -117,7 +151,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       messages: [{
         role: 'user',
         content: [
-          { type: 'text', text: buildInspectionPrompt(JSON.stringify(charJson, null, 2)) },
+          { type: 'text', text: buildInspectionPrompt(JSON.stringify(charJson, null, 2), stoneBbox) },
           { type: 'image', image: imageBuffer },
         ],
       }],
