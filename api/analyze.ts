@@ -44,7 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const imageData = image.split(',')[1];
 
     const { text } = await generateText({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-1.5-flash'),
       messages: [
         {
           role: 'user',
