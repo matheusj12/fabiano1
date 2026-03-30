@@ -5,29 +5,34 @@ import Header from './components/Header';
 import InspectionPage from './components/InspectionPage';
 import CalculatorPage from './components/CalculatorPage';
 import { AIAnalysisResult } from './services/aiService';
+import { StoneImperfection } from './types';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'inspect' | 'calc'>('inspect');
-  
-  // Shared state for data transfer between steps
+
   const [inspectionData, setInspectionData] = useState<{
     image: string | null;
     analysis: AIAnalysisResult | null;
+    imperfections: StoneImperfection[];
   }>({
     image: null,
     analysis: null,
+    imperfections: [],
   });
 
-  const handleNextStep = (image: string, analysis: AIAnalysisResult | null) => {
-    setInspectionData({ image, analysis });
+  const handleNextStep = (
+    image: string,
+    analysis: AIAnalysisResult | null,
+    imperfections: StoneImperfection[],
+  ) => {
+    setInspectionData({ image, analysis, imperfections });
     setActiveTab('calc');
   };
 
   return (
     <div className="min-h-screen bg-[#111] text-[#f0ede8] font-sans">
       <Header />
-      
-      {/* TABS */}
+
       <div className="flex bg-[#1a1a1a] border-b border-[#333] px-6">
         <button
           className={`flex items-center gap-2 px-6 py-3 text-sm font-medium cursor-pointer border-b-2 transition-all ${
@@ -51,7 +56,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* MAIN CONTENT */}
       <main className="max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
           <motion.div

@@ -160,7 +160,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const inspJson = JSON.parse(inspText.match(/\{[\s\S]*\}/)![0]);
 
-    res.status(200).json({ ...charJson, ...inspJson });
+    res.status(200).json({ ...charJson, ...inspJson, stoneBbox });
   } catch (error: any) {
     console.error('Erro análise:', error);
     res.status(500).json({ error: error.message || 'Erro na análise' });

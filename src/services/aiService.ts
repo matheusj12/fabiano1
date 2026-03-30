@@ -33,6 +33,8 @@ export interface AIAnalysisResult {
     bottomLeft: QuadrantResult;
     bottomRight: QuadrantResult;
   };
+  // Etapa 0 — Localização
+  stoneBbox?: [number, number, number, number]; // [ymin, xmin, ymax, xmax] em 0-1000
 }
 
 export async function analyzeStoneImage(base64Image: string): Promise<AIAnalysisResult> {

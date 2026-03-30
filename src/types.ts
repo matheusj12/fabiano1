@@ -16,3 +16,16 @@ export interface Stone {
   w: number | '';
   h: number | '';
 }
+
+export interface StoneImperfection {
+  id: number;
+  type: 'lasca' | 'furo' | 'recorte' | 'rachadura' | 'fissura' | 'mancha' | 'outro';
+  label: string;
+  /** posição relativa à chapa: 0-1 */
+  rx: number;
+  ry: number;
+  rw: number;
+  rh: number;
+  severity?: 'crítico' | 'moderado' | 'leve';
+  source: 'ai' | 'manual';
+}
