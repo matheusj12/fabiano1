@@ -42,6 +42,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   });
 
   try {
+    // Extrai base64 puro e mimeType do data URL
+    const matches = image.match(/^data:([^;]+);base64,(.+)$/);
+    if (!matches) throw new Error('Formato de imagem inválido');
+    const mimeType = matches[1] as 'image/png' | 'image/jpeg' | 'image/webp';
+    const base64Data = matches[2];
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+
     const { text } = await generateText({
       model: openai('o4-mini'),
       messages: [
@@ -49,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           role: 'user',
           content: [
             { type: 'text', text: prompt },
-            { type: 'image', image: image as `data:${string}` },
+            { type: 'image', image: imageBuffer, mimeType },
           ],
         },
       ],
