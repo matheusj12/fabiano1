@@ -395,7 +395,7 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
           <div className="bg-[#1e1e1e] border border-[#333] rounded-xl p-5 flex flex-col gap-4 min-h-[450px]">
             <div className="flex items-center gap-2 text-[#c9a84c] border-b border-[#333] pb-3">
               <Sparkles className="w-5 h-5" />
-              <h2 className="text-sm font-bold uppercase tracking-widest">Relatório de IA</h2>
+              <h2 className="text-sm font-bold uppercase tracking-widest">Relatório Técnico</h2>
             </div>
 
             {!imageLoaded ? (
@@ -410,54 +410,131 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
                   <Loader2 className="w-14 h-14 text-[#c9a84c] animate-spin absolute -top-1 -left-1 opacity-40" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium text-[#f0ede8]">Processando Chapa...</p>
-                  <p className="text-[10px] text-[#888]">Identificando rachaduras e fissuras</p>
+                  <p className="text-sm font-medium text-[#f0ede8]">Análise em 2 etapas...</p>
+                  <p className="text-[10px] text-[#888]">Caracterizando pedra e inspecionando quadrantes</p>
                 </div>
               </div>
             ) : aiResult ? (
-              <div className="flex-1 flex flex-col gap-5 overflow-y-auto pr-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-[#888] uppercase">Score de Qualidade</span>
-                    <span className={`text-2xl font-black ${aiResult.qualityScore > 80 ? 'text-[#2ecc71]' : aiResult.qualityScore > 50 ? 'text-[#f1c40f]' : 'text-[#e74c3c]'}`}>
-                      {aiResult.qualityScore}%
-                    </span>
+              <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1">
+
+                {/* Grade + Scores */}
+                <div className="flex items-center gap-3">
+                  <div className={`text-2xl font-black px-3 py-1 rounded-lg border-2 ${
+                    aiResult.commercialGrade === 'A' ? 'text-[#2ecc71] border-[#27ae60] bg-[#0d2a1a]' :
+                    aiResult.commercialGrade === 'B' ? 'text-[#f1c40f] border-[#f39c12] bg-[#2a2200]' :
+                    aiResult.commercialGrade === 'C' ? 'text-[#e67e22] border-[#d35400] bg-[#2a1400]' :
+                    'text-[#e74c3c] border-[#c0392b] bg-[#2a0d0d]'
+                  }`}>
+                    {aiResult.commercialGrade}
                   </div>
-                  <div className="w-12 h-12 rounded-full border-2 border-[#333] flex items-center justify-center">
-                    {aiResult.qualityScore > 70 ? <CheckCircle className="w-6 h-6 text-[#2ecc71]" /> : <AlertTriangle className="w-6 h-6 text-[#f1c40f]" />}
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <div className="flex justify-between text-[10px] text-[#888]">
+                      <span>Qualidade</span><span className="text-[#f0ede8]">{aiResult.qualityScore}%</span>
+                    </div>
+                    <div className="h-1.5 bg-[#333] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width:`${aiResult.qualityScore}%`, backgroundColor: aiResult.qualityScore > 80 ? '#2ecc71' : aiResult.qualityScore > 60 ? '#f1c40f' : '#e74c3c' }} />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-[#888]">
+                      <span>Integridade</span><span className="text-[#f0ede8]">{aiResult.structuralIntegrity}%</span>
+                    </div>
+                    <div className="h-1.5 bg-[#333] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-[#3498db] transition-all" style={{ width:`${aiResult.structuralIntegrity}%` }} />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-[#888]">
+                      <span>Uniformidade</span><span className="text-[#f0ede8]">{aiResult.colorUniformity}%</span>
+                    </div>
+                    <div className="h-1.5 bg-[#333] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-[#9b59b6] transition-all" style={{ width:`${aiResult.colorUniformity}%` }} />
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <span className="text-[10px] text-[#888] uppercase font-bold">Resumo Técnico</span>
-                  <p className="text-xs text-[#ccc] leading-relaxed bg-[#252525] p-3 rounded-lg border border-[#333]">
-                    {aiResult.summary}
-                  </p>
+                {/* Caracterização */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { label: 'Tipo', value: aiResult.stoneType },
+                    { label: 'Acabamento', value: aiResult.finish },
+                    { label: 'Cor', value: aiResult.color },
+                    { label: 'Espessura', value: aiResult.estimatedThickness },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="bg-[#252525] rounded-lg p-2 border border-[#333]">
+                      <div className="text-[9px] text-[#666] uppercase">{label}</div>
+                      <div className="text-[11px] text-[#f0ede8] font-medium capitalize truncate">{value}</div>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <span className="text-[10px] text-[#888] uppercase font-bold">Imperfeições Detectadas</span>
+                {/* Análise por quadrante */}
+                {aiResult.quadrantAnalysis && (
                   <div className="flex flex-col gap-1.5">
-                    {aiResult.imperfections.map((imp, i) => (
-                      <div key={i} className="flex items-start gap-2 text-[11px] text-[#aaa] bg-[#1a1a1a] p-2 rounded border-l-2 border-[#e74c3c]">
-                        <AlertTriangle className="w-3 h-3 text-[#e74c3c] mt-0.5 shrink-0" />
-                        <span>{imp}</span>
+                    <span className="text-[10px] text-[#888] uppercase font-bold">Análise por Quadrante</span>
+                    <div className="grid grid-cols-2 gap-1">
+                      {([
+                        ['topLeft','↖ Sup. Esq.'],['topRight','↗ Sup. Dir.'],
+                        ['bottomLeft','↙ Inf. Esq.'],['bottomRight','↘ Inf. Dir.']
+                      ] as [keyof typeof aiResult.quadrantAnalysis, string][]).map(([key, label]) => {
+                        const q = aiResult.quadrantAnalysis[key];
+                        return (
+                          <div key={key} className={`p-2 rounded-lg border ${q.score > 80 ? 'border-[#27ae60] bg-[#0d2a1a]' : q.score > 60 ? 'border-[#f39c12] bg-[#2a2200]' : 'border-[#c0392b] bg-[#2a0d0d]'}`}>
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-[9px] text-[#888]">{label}</span>
+                              <span className={`text-[10px] font-bold ${q.score > 80 ? 'text-[#2ecc71]' : q.score > 60 ? 'text-[#f1c40f]' : 'text-[#e74c3c]'}`}>{q.score}%</span>
+                            </div>
+                            {q.issues.length > 0 ? q.issues.slice(0,2).map((issue, i) => (
+                              <div key={i} className="text-[9px] text-[#aaa] truncate">• {issue}</div>
+                            )) : <div className="text-[9px] text-[#2ecc71]">• Sem defeitos</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Resumo */}
+                <div className="bg-[#252525] p-3 rounded-lg border border-[#333]">
+                  <div className="text-[9px] text-[#888] uppercase mb-1">Resumo Técnico</div>
+                  <p className="text-[11px] text-[#ccc] leading-relaxed">{aiResult.summary}</p>
+                </div>
+
+                {/* Detecções por severidade */}
+                {aiResult.detections?.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] text-[#888] uppercase font-bold">{aiResult.detections.length} Defeito(s) Detectado(s)</span>
+                    {aiResult.detections.map((d, i) => (
+                      <div key={i} className={`flex items-start gap-2 text-[11px] p-2 rounded border-l-2 ${
+                        d.severity === 'crítico' ? 'border-[#e74c3c] bg-[#1a0a0a] text-[#e74c3c]' :
+                        d.severity === 'moderado' ? 'border-[#f39c12] bg-[#1a1200] text-[#f39c12]' :
+                        'border-[#888] bg-[#1a1a1a] text-[#aaa]'
+                      }`}>
+                        <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                        <div>
+                          <span className="font-bold capitalize">{d.type}</span>
+                          <span className="text-[#666] mx-1">·</span>
+                          <span className="text-[#888] text-[10px]">{d.description}</span>
+                        </div>
                       </div>
                     ))}
-                    {aiResult.imperfections.length === 0 && (
-                      <p className="text-[11px] text-[#2ecc71] italic">Nenhuma imperfeição crítica detectada.</p>
-                    )}
                   </div>
-                </div>
+                )}
+
+                {/* Recomendações */}
+                {aiResult.recommendations?.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] text-[#888] uppercase font-bold">Recomendações</span>
+                    {aiResult.recommendations.map((r, i) => (
+                      <div key={i} className="flex items-start gap-2 text-[11px] text-[#aaa] bg-[#1a1a1a] p-2 rounded border-l-2 border-[#3498db]">
+                        <CheckCircle className="w-3 h-3 text-[#3498db] mt-0.5 shrink-0" />
+                        <span>{r}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : aiError ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 text-[#e74c3c]">
                 <AlertTriangle className="w-10 h-10" />
                 <p className="text-xs">{aiError}</p>
-                <button 
-                  onClick={handleAIAnalysis}
-                  className="text-[10px] underline uppercase tracking-widest text-[#888] hover:text-white"
-                >
+                <button onClick={handleAIAnalysis} className="text-[10px] underline uppercase tracking-widest text-[#888] hover:text-white">
                   Tentar novamente
                 </button>
               </div>
@@ -469,8 +546,8 @@ export default function InspectionPage({ onNext }: InspectionPageProps) {
             )}
 
             <div className="mt-auto pt-3 border-t border-[#333] flex items-center justify-between text-[9px] text-[#555] uppercase tracking-tighter">
-              <span>Gemini Vision AI</span>
-              <span>v2.5 Flash</span>
+              <span>OpenAI o3 · 2 etapas</span>
+              <span>MarmorCut Pro</span>
             </div>
           </div>
           

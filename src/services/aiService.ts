@@ -1,14 +1,38 @@
 export interface AIDetection {
-  type: 'rachadura' | 'fissura' | 'lasca' | 'mancha' | 'outro';
+  type: 'rachadura' | 'fissura' | 'lasca' | 'mancha' | 'poro' | 'eflorescência' | 'irregularidade' | 'outro';
+  severity: 'crítico' | 'moderado' | 'leve';
   description: string;
+  quadrant: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
   box_2d: [number, number, number, number];
 }
 
+export interface QuadrantResult {
+  score: number;
+  issues: string[];
+}
+
 export interface AIAnalysisResult {
+  // Etapa 1 — Caracterização
+  stoneType: string;
+  finish: string;
+  color: string;
+  veinPattern: string;
+  estimatedThickness: string;
+  commercialGrade: 'A' | 'B' | 'C' | 'Descarte';
+  colorUniformity: number;
+  // Etapa 2 — Inspeção
   summary: string;
-  imperfections: string[];
   qualityScore: number;
+  structuralIntegrity: number;
+  imperfections: string[];
+  recommendations: string[];
   detections: AIDetection[];
+  quadrantAnalysis: {
+    topLeft: QuadrantResult;
+    topRight: QuadrantResult;
+    bottomLeft: QuadrantResult;
+    bottomRight: QuadrantResult;
+  };
 }
 
 export async function analyzeStoneImage(base64Image: string): Promise<AIAnalysisResult> {
