@@ -7,7 +7,10 @@
       "Bash(wc -l *)",
       "Bash(curl -s https://api.vercel.com/*)",
       "Bash(curl -s https://api.github.com/*)",
-      "Bash(curl -s https://*.supabase.co/*)"
+      "Bash(curl -s https://*.supabase.co/*)",
+      "Bash(curl -s https://generativelanguage.googleapis.com/*)",
+      "Bash(git fetch*)",
+      "Bash(git reset:*)"
     ]
   },
   "language": "portuguese"

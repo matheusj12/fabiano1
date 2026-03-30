@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { text } = await generateText({
-      model: openai('gpt-4o'),
+      model: openai('o4-mini'),
       messages: [
         {
           role: 'user',
